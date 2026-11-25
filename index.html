@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>December With Jesus</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#070d1c;--em:#0b3b2c;--gold:#c9a24b;--champ:#f3dfae;--ivory:#f6f0e2;--red:#9b2230}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;overflow-x:hidden;background:var(--navy);color:var(--ivory);font-family:'Cormorant Garamond',Georgia,serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.ar{font-family:'Noto Naskh Arabic',serif;direction:rtl;line-height:2}
+canvas#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+#intro h1{font-size:clamp(2rem,9vw,4rem);letter-spacing:.14em;margin:.3em 0;color:var(--champ);opacity:0;animation:fade 2.5s 2.2s forwards}
+#intro p{opacity:0;animation:fade 2s 4s forwards;letter-spacing:.12em}
+#intro button{opacity:0;animation:fade 2s 5.5s forwards}
+.bstar{width:70px;height:70px;opacity:0;animation:fade 2s 1s forwards;filter:drop-shadow(0 0 18px #f3dfae)}
+@keyframes fade{to{opacity:1}}
+button{font:inherit;cursor:pointer;color:var(--navy);background:linear-gradient(#f3dfae,#c9a24b);border:0;border-radius:30px;padding:14px 28px;letter-spacing:.14em;font-weight:700;min-height:44px}
+button.ghost{background:transparent;color:var(--champ);border:1px solid var(--gold);letter-spacing:.08em}
+button:focus-visible,.orn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#tree{display:none}
+#tree h2{margin:.4em 0 0;letter-spacing:.12em;color:var(--champ);font-size:1.4rem}
+#bar{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:10px;z-index:5;display:flex;gap:8px;align-items:center}
+#bar button{padding:8px 14px}#vol{width:80px}
+#badge{font-size:.8rem;color:var(--gold);letter-spacing:.1em}
+svg#treeSvg{width:min(100%,480px);height:auto}
+.orn{cursor:pointer;transition:transform .25s;transform-box:fill-box;transform-origin:center}
+.orn:hover,.orn:active{transform:scale(1.18)}
+.orn.locked{opacity:.35;cursor:not-allowed}.orn.open circle.ring{stroke:#fff;stroke-width:2}
+.orn.unlocked circle.b{filter:drop-shadow(0 0 5px #f3dfae)}
+.lit .orn circle.b{filter:drop-shadow(0 0 8px #fff)}.lit #star{filter:drop-shadow(0 0 25px #fff)}
+#star{filter:drop-shadow(0 0 10px #f3dfae);animation:tw 3s infinite}
+@keyframes tw{50%{opacity:.75}}
+#modal{position:fixed;inset:0;z-index:10;background:rgba(3,6,14,.88);display:none;align-items:center;justify-content:center;padding:14px}
+#card{width:min(100%,560px);max-height:92vh;overflow:auto;background:linear-gradient(#0e2a24,#0a1226);border:1px solid var(--gold);border-radius:18px;padding:22px;animation:rise .6s}
+@keyframes rise{from{opacity:0;transform:translateY(30px) scale(.96)}}
+#card h3{color:var(--gold);letter-spacing:.2em;font-size:.85rem;margin:18px 0 2px}
+#card .v{font-size:1.4rem;color:var(--champ)}.ref{color:var(--gold)}
+#card .day{font-size:2.4rem;color:var(--gold);margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:20px}
+#fin{display:none;margin-top:14px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 16px;border-radius:20px;z-index:20;display:none}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition:none!important}}
+</style></head><body>
+<canvas id="sky"></canvas>
+
+<section class="screen" id="intro">
+  <svg class="bstar" viewBox="-50 -50 100 100"><path d="M0-48L8-8 48 0 8 8 0 48-8 8-48 0-8-8Z" fill="#f3dfae"/></svg>
+  <h1>DECEMBER WITH JESUS</h1>
+  <p>31 Days. 31 Gifts. One Journey of Love.</p>
+  <button id="start">START YOUR JOURNEY</button>
+</section>
+
+<section class="screen" id="tree">
+  <div id="bar"><span id="badge"></span><button class="ghost" id="sqlBtn" aria-label="Copy Supabase SQL">SQL</button><button class="ghost" id="mute" aria-label="Mute or unmute">🔊</button><input id="vol" type="range" min="0" max="1" step=".05" value=".4" aria-label="Volume"></div>
+  <h2>31 GIFTS</h2>
+  <svg id="treeSvg" viewBox="0 0 360 520" role="group" aria-label="Christmas tree with 31 ornaments"></svg>
+  <div id="fin" class="ar"></div>
+</section>
+
+<div id="modal" role="dialog" aria-modal="true"><div id="card"></div></div>
+<div id="toast"></div>
+
+<!-- ===== SUPABASE SQL SETUP (embedded; paste into Supabase SQL Editor, or press the SQL button in the app) ===== -->
+<script type="text/plain" id="sqlSetup">
+-- December With Jesus — Supabase setup. Run in SQL Editor.
+create table if not exists app_config(id int primary key default 1 check(id=1), testing_mode boolean not null default true, year int not null default 2026);
+insert into app_config default values on conflict do nothing;
+
+create table if not exists visitors(id uuid primary key, created_at timestamptz default now());
+create table if not exists day_msg_counts(day int, msg_idx int, uses int not null default 0, primary key(day,msg_idx));
+create table if not exists assignments(
+  visitor_id uuid references visitors(id) on delete cascade,
+  day int check(day between 1 and 31),
+  msg_idx int not null, opened_at timestamptz default now(),
+  primary key(visitor_id,day));
+
+alter table app_config enable row level security; alter table visitors enable row level security;
+alter table day_msg_counts enable row level security; alter table assignments enable row level security;
+-- No policies = no direct table access for anon. All access goes through the SECURITY DEFINER RPC below.
+
+create or replace function open_ornament(p_visitor uuid, p_day int)
+returns json language plpgsql security definer set search_path=public as $$
+declare cfg app_config; cairo date; a assignments; pick int; n_msgs constant int := 10;
+begin
+  if p_visitor is null or p_day not between 1 and 31 then raise exception 'bad input' using errcode='22023'; end if;
+  select * into cfg from app_config where id=1;
+  cairo := (now() at time zone 'Africa/Cairo')::date;
+  -- production date rule (enforced whenever testing_mode = false)
+  if not cfg.testing_mode and cairo < make_date(cfg.year,12,p_day) then
+    raise exception 'locked' using errcode='42501'; end if;
+  insert into visitors(id) values(p_visitor) on conflict do nothing;
+  perform pg_advisory_xact_lock(hashtext(p_visitor::text||':'||p_day));  -- blocks double-clicks / tabs
+  select * into a from assignments where visitor_id=p_visitor and day=p_day;
+  if found then return json_build_object('day',p_day,'msg_idx',a.msg_idx); end if;
+  insert into day_msg_counts(day,msg_idx) select p_day,g from generate_series(0,n_msgs-1) g on conflict do nothing;
+  -- least-used message for that day; random tie-break
+  select msg_idx into pick from day_msg_counts where day=p_day order by uses, random() limit 1 for update skip locked;
+  if pick is null then pick := floor(random()*n_msgs)::int; end if;
+  update day_msg_counts set uses=uses+1 where day=p_day and msg_idx=pick;
+  insert into assignments(visitor_id,day,msg_idx) values(p_visitor,p_day,pick);
+  return json_build_object('day',p_day,'msg_idx',pick);
+end $$;
+revoke all on function open_ornament(uuid,int) from public;
+grant execute on function open_ornament(uuid,int) to anon;
+
+-- LAUNCH: update app_config set testing_mode=false;   (and set TESTING_MODE=false in index.html)
+</script>
+<script>
+/* ============ CONFIG ============ */
+const TESTING_MODE = true;   // <-- set to false before public launch (ALSO run: update app_config set testing_mode=false;)
+const SUPABASE_URL = "";     // e.g. https://xxxx.supabase.co  (public project URL)
+const SUPABASE_ANON_KEY = "";// public anon key ONLY. Never put a service-role key here.
+const MUSIC_URL = "";        // optional licensed/original mp3 URL; empty = built-in generated music
+const YEAR = 2026, TZ = "Africa/Cairo";
+/* ================================= */
+
+const NOTE_DEMO = !SUPABASE_URL; // demo = no shared database, assignments only in this browser
+
+// source: E = from MMMMMM.xlsx (exact), N = added Nativity passage (verify wording against your Bible edition)
+const D=[
+[1,"لأنه يولد لنا ولد ونعطى ابناً... ويدعى اسمه عجيباً مشيراً إلهاً قديراً أباً أبدياً رئيس السلام","إشعياء ٩:٦","N"],
+[1,"هوذا العذراء تحبل وتلد ابناً ويدعون اسمه عمانوئيل الذي تفسيره الله معنا","متى ١:٢٣","N"],
+[1,"أنا عارف الأفكار التي أنا مفتكر بها عنكم... أفكار سلام لا شر","إرميا ٢٩:١١","E"],
+[1,"تشدد وليتشجع قلبك وانتظر الرب","مزمور ٢٧:١٤","E"],
+[1,"الرجاء لا يخزي","رومية ٥:٥","E"],
+[1,"لأن عندك ينبوع الحياة. بنورك نرى نوراً","مزمور ٣٦:٩","E"],
+[2,"هوذا أنا أمة الرب ليكن لي كما تقولين","لوقا ١:٣٨","N"],
+[2,"لا تخف لأني معك","إشعياء ٤١:١٠","E"],
+[2,"الرب راعيَّ فلا يعوزني شيء","مزمور ٢٣:١","E"],
+[2,"توكل على الرب بكل قلبك، وعلى فهمك لا تعتمد","أمثال ٣:٥","E"],
+[2,"طوبى للذين يسمعون كلام الله ويحفظونه","لوقا ١١:٢٨","E"],
+[2,"ألقِ على الرب همك فهو يعولك","مزمور ٥٥:٢٢","E"],
+[3,"كلمتك مصباح لرجلي ونور لسبيلي","مزمور ١١٩:١٠٥","E"],
+[3,"أرشدك وأعلمك الطريق التي تسلكها","مزمور ٣٢:٨","E"],
+[3,"فلما رأوا النجم فرحوا فرحاً عظيماً جداً","متى ٢:١٠","N"],
+[3,"لا تخافوا فها أنا أبشركم بفرح عظيم يكون لجميع الشعب","لوقا ٢:١٠","N"],
+[3,"افرحوا في الرب كل حين، وأقول أيضاً افرحوا","فيلبي ٤:٤","E"],
+[3,"هذا هو اليوم الذي صنعه الرب، نبتهج ونفرح فيه","مزمور ١١٨:٢٤","E"],
+[4,"الله محبة","١ يوحنا ٤:٨","E"],
+[4,"والكلمة صار جسداً وحل بيننا","يوحنا ١:١٤","N"],
+[4,"لأنه هكذا أحب الله العالم حتى بذل ابنه الوحيد لكي لا يهلك كل من يؤمن به بل تكون له الحياة الأبدية","يوحنا ٣:١٦","N"],
+[4,"سلامي أعطيكم. لا تضطرب قلوبكم ولا ترهب","يوحنا ١٤:٢٧","E"],
+[4,"ليضيء نوركم هكذا قدام الناس","متى ٥:١٦","E"],
+[4,"المجد لله في الأعالي وعلى الأرض السلام وبالناس المسرة","لوقا ٢:١٤","N"],
+[4,"أنه ولد لكم اليوم في مدينة داود مخلص هو المسيح الرب","لوقا ٢:١١","N"],
+[4,"تعلموا مني، لأني وديع ومتواضع القلب","متى ١١:٢٩","E"],
+[5,"إن اعترفنا بخطايانا فهو أمين وعادل حتى يغفر لنا خطايانا","١ يوحنا ١:٩","E"],
+[5,"قلباً نقياً اخلق فيَّ يا الله","مزمور ٥١:١٠","E"],
+[5,"لأننا بالإيمان نسلك لا بالعيان","٢ كورنثوس ٥:٧","E"],
+[5,"أستطيع كل شيء في المسيح الذي يقويني","فيلبي ٤:١٣","E"],
+[5,"اشكروا في كل شيء","١ تسالونيكي ٥:١٨","E"]
+];
+const PARTS=["THE PROMISE","THE ANNOUNCEMENT","THE JOURNEY","THE GIFT","THE NEW BEGINNING"];
+// PLACEHOLDER content pool: 10 generic messages (NOT 310 day-specific ones — see README/report). Egyptian Arabic.
+const MSG=[
+"يا حبيبي، الآية دي مش مجرد كلام جميل؛ دي دعوة إنك تقف لحظة وتفتكر إن ربنا قريب منك أكتر مما تتخيل.",
+"النهارده جرّب تسيب القلق شوية، وتفتكر إن اللي بدأ معاك الرحلة هيكملها معاك خطوة خطوة.",
+"مش لازم تكون كل حاجة واضحة قدامك. كفاية إنك تمشي النهارده بقلب مفتوح لكلمة ربنا.",
+"الكلمة دي ممكن تكون هي اللي محتاجها بالظبط في يومك. خدها بهدوء وسيبها تشتغل جواك.",
+"لو اليوم تقيل عليك، افتكر إنك مش لوحدك. ربنا شايفك ومهتم بأدق تفاصيلك.",
+"ربنا مش بيستنى منك تبقى كامل؛ بيستناك تيجي له زي ما إنت، بتعبك وبأسئلتك.",
+"خلّي الآية دي تبقى نور صغير في طريقك النهارده، ومرّره لحد محتاجه حواليك.",
+"كل يوم في الرحلة دي فرصة تقرب أكتر من المسيح، مش بس تفتح هدية جديدة.",
+"اللي بيعدي في حياتك مش صدفة. الله بيشتغل حتى في الحاجات اللي لسه مش فاهمها.",
+"خد نفس عميق، واسمع الكلمة كأنها بتتقال لك إنت بالاسم."];
+const REF={ // per part: reflection + prayer (PLACEHOLDER: 1 per part)
+1:["إيه أكتر حاجة بتستناها في حياتك؟ اكتب حاجة واحدة بتستنى ربنا فيها، وقرر تثق إن توقيته أحسن.","يا رب، علمني أستنّاك بثقة وأنا مطمّن إن وعودك صادقة. آمين."],
+2:["فكّر: إمتى آخر مرة قلت لربنا 'نعم' وإنت مش فاهم كل التفاصيل؟ إيه الخطوة الصغيرة اللي تقدر تقولها النهارده؟","يا رب، ادّيني قلب مستعد زي مريم، يسمع لك ويقول نعم. آمين."],
+3:["الرحلة مش دايماً مريحة، بس فيها نور. مين في حياتك محتاج منك كلمة أو وجود النهارده؟","يا رب، امشي معايا في طريقي، ونوّر لي الخطوة الجاية. آمين."],
+4:["لو الحب هو أعظم هدية، إيه الشكل العملي إنك تديه لحد النهارده في العيلة أو الشغل أو الكلية؟","يا رب، شكراً إنك جيت لنا. خلّي حبك يظهر في كلامي وتصرفاتي. آمين."],
+5:["السنة قربت تخلص. إيه اللي محتاج تسيبه، وإيه اللي محتاج تبدأه من جديد؟","يا رب، اغسل قلبي وابدأ معايا بداية جديدة، وقوّيني أمشي وراك. آمين."]};
+const FIN={t:"THE GREATEST GIFT WAS NEVER UNDER THE TREE.",
+m:"أعظم هدية في الكريسماس مش تحت الشجرة؛ هي يسوع نفسه، الكلمة اللي صار جسداً وحل بيننا. الـ٣١ يوم دول ماكانوش عن إننا نفتح هدايا، لكن عن إننا نقرّب منه.",
+r:"بص على السنة اللي عدّت: إيه اللي تشكر ربنا عليه؟ إيه اللي محتاج تسامح فيه أو تسيبه ورا؟",
+p:"يا رب، شكراً على السنة اللي فاتت وعلى أعظم هدية: يسوع. ادّيني رجاء وسلام في السنة الجاية. آمين."};
+
+/* ---- helpers ---- */
+const $=s=>document.querySelector(s);
+const store={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const toast=t=>{const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2500)};
+function vid(){let v=store.get('dwj_vid');if(!v||!/^[0-9a-f-]{36}$/.test(v)){v=crypto.randomUUID();store.set('dwj_vid',v)}return v}
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function cairoParts(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).split('-');return{y:+p[0],m:+p[1],d:+p[2]}}
+function localUnlocked(n){if(TESTING_MODE)return true;const c=cairoParts();return c.y>YEAR||(c.y===YEAR&&c.m===12&&c.d>=n)}  // UI hint only; the server is the real gate
+const busy=new Set();
+
+/* ---- assignment (server if configured, else persistent local demo) ---- */
+async function getAssignment(day){
+  const key='dwj_as_'+day, saved=store.get(key);
+  if(saved&&!(!NOTE_DEMO&&!saved.srv))return saved;
+  let idx;
+  if(NOTE_DEMO){
+    if(!localUnlocked(day))throw new Error('locked');
+    idx=hash(vid()+':'+day)%MSG.length;
+  }else{
+    const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/open_ornament',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({p_visitor:vid(),p_day:day})});
+    if(!r.ok)throw new Error(r.status===400||r.status===403?'locked':'network');
+    idx=(await r.json()).msg_idx;
+  }
+  const a={day,idx,srv:!NOTE_DEMO,kept:saved?.kept||false};store.set(key,a);return a;
+}
+
+/* ---- tree ---- */
+const rows=[3,4,5,6,6,7];let n=0;
+function buildTree(){
+  const s=$('#treeSvg');let h=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#145a41"/><stop offset="1" stop-color="#062a1f"/></linearGradient></defs>`;
+  [[50,200,110],[110,260,170],[170,320,230],[230,380,290],[300,440,350]].forEach((t,i)=>{const w=70+i*32;h+=`<path d="M180 ${t[0]-20+i*18}L${180-w} ${t[0]+110+i*12}Q180 ${t[0]+128+i*12} ${180+w} ${t[0]+110+i*12}Z" fill="url(#g)" stroke="#0a3a2c"/>`});
+  h+=`<rect x="165" y="470" width="30" height="40" fill="#3a2414"/>`;
+  h+=`<path id="star" d="M180 4l7 22 23 1-18 14 7 22-19-13-19 13 7-22-18-14 23-1z" fill="#f3dfae"/>`;
+  for(let i=0;i<60;i++){const y=60+Math.random()*400,w=(y-40)*.42;h+=`<circle cx="${180+(Math.random()*2-1)*w}" cy="${y}" r="1.6" fill="#ffe9a8" opacity=".8"/>`}
+  const cols=['#c9a24b','#9b2230','#e8d9a8','#2f6f8f'];n=0;
+  rows.forEach((c,ri)=>{const y=82+ri*70,w=(y-30)*.38;for(let k=0;k<c;k++){n++;const x=c==1?180:180-w+(2*w)*(k/(c-1)),d=n;
+    h+=`<g class="orn" data-d="${d}" tabindex="0" role="button" aria-label="Ornament ${d}"><circle class="ring" cx="${x}" cy="${y}" r="21" fill="none"/><circle class="b" cx="${x}" cy="${y}" r="19" fill="${cols[d%4]}" stroke="#fff6" /><circle cx="${x-6}" cy="${y-7}" r="4" fill="#fff" opacity=".5"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#0b1020" style="pointer-events:none">${String(d).padStart(2,'0')}</text></g>`}});
+  s.innerHTML=h;
+  s.querySelectorAll('.orn').forEach(o=>{const d=+o.dataset.d;
+    o.addEventListener('click',()=>openOrn(d));o.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openOrn(d)}});});
+  refresh();
+}
+function refresh(){document.querySelectorAll('.orn').forEach(o=>{const d=+o.dataset.d,u=localUnlocked(d);o.classList.toggle('locked',!u);o.classList.toggle('unlocked',u);o.classList.toggle('open',!!store.get('dwj_as_'+d));o.setAttribute('aria-disabled',!u)});
+ $('#badge').textContent=(TESTING_MODE?'TESTING MODE · ':'')+(NOTE_DEMO?'DEMO DATA (no shared DB)':'')}
+
+async function openOrn(d){
+  if(busy.has(d))return;busy.add(d);sfx();
+  try{
+    const a=await getAssignment(d),v=D[d-1],p=v[0],[rf,pr]=REF[p];
+    const fin=d===31;
+    $('#card').innerHTML=`<p class="day">${String(d).padStart(2,'0')}</p><div style="letter-spacing:.2em;font-size:.8rem;color:var(--gold)">PART ${p} · ${PARTS[p-1]}</div>
+    ${fin?`<h2 style="color:var(--champ);letter-spacing:.1em">${FIN.t}</h2>`:''}
+    <h3>GOD'S WORD</h3><div class="ar v">«${v[1]}»</div><div class="ar ref">— ${v[2]} ${v[3]==='N'?'<small>(Nativity passage added; not from Excel)</small>':''}</div>
+    <h3>A PERSONAL MESSAGE</h3><div class="ar">${fin?FIN.m:MSG[a.idx]}</div>
+    <h3>A MOMENT TO REFLECT</h3><div class="ar">${fin?FIN.r:rf}</div>
+    <h3>A LITTLE PRAYER</h3><div class="ar">${fin?FIN.p:pr}</div>
+    <div class="row"><button id="keep">${a.kept?'KEPT ✓':'KEEP THIS GIFT'}</button><button class="ghost" id="share">SHARE THE LOVE</button><button class="ghost" id="close">CLOSE</button></div>`;
+    $('#modal').style.display='flex';$('#close').focus();
+    $('#keep').onclick=()=>{a.kept=true;store.set('dwj_as_'+d,a);$('#keep').textContent='KEPT ✓'};
+    $('#share').onclick=()=>{const t=`«${v[1]}» — ${v[2]}\nDecember With Jesus ✨`;navigator.share?navigator.share({text:t}).catch(()=>{}):navigator.clipboard?.writeText(t).then(()=>toast('Copied'))};
+    $('#close').onclick=closeM;
+    if(fin){document.body.classList.add('lit');$('#fin').style.display='block';$('#fin').textContent='«'+FIN.t+'»'}
+    refresh();
+  }catch(e){toast(e.message==='locked'?'This gift is not unlocked yet 🎁':'Connection problem — please try again')}
+  finally{busy.delete(d)}
+}
+function closeM(){$('#modal').style.display='none'}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeM()});
+addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
+
+/* ---- sky ---- */
+(function(){const c=$('#sky'),x=c.getContext('2d');let W,H,S=[];const rs=()=>{W=c.width=innerWidth;H=c.height=innerHeight;S=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,p:Math.random()*6}))};rs();addEventListener('resize',rs);
+const F=Array.from({length:60},()=>({x:Math.random(),y:Math.random(),s:Math.random()*.6+.2}));
+(function f(t){x.clearRect(0,0,W,H);const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#050a18');g.addColorStop(1,'#0a2a22');x.fillStyle=g;x.fillRect(0,0,W,H);
+S.forEach(s=>{x.globalAlpha=.4+.4*Math.sin(t/900+s.p);x.fillStyle='#fff';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill()});x.globalAlpha=.8;
+F.forEach(s=>{s.y+=s.s/H*1.2;if(s.y>1)s.y=0;x.beginPath();x.arc(s.x*W,s.y*H,1.4,0,7);x.fill()});requestAnimationFrame(f)})(0)})();
+
+/* ---- audio: generated original ambient bells (no copyrighted recording). Set MUSIC_URL to use your own file. ---- */
+let AC,master,timer,muted=store.get('dwj_mute',false),vol=store.get('dwj_vol',.4),el;
+function startMusic(){
+  if(MUSIC_URL){el=new Audio(MUSIC_URL);el.loop=true;el.volume=muted?0:vol;el.play().catch(()=>{});return}
+  AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=muted?0:vol*.5;master.connect(AC.destination);
+  const sc=[392,440,523.25,587.33,659.25,784,880],ch=[[196,261.63,329.63],[174.61,261.63,349.23],[196,246.94,392]];let i=0;
+  const tone=(f,t,d,g,type='sine')=>{const o=AC.createOscillator(),e=AC.createGain();o.type=type;o.frequency.value=f;e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.02);e.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(e);e.connect(master);o.start(t);o.stop(t+d)};
+  const step=()=>{const t=AC.currentTime+.05;tone(sc[Math.floor(Math.random()*sc.length)]*(Math.random()<.3?2:1),t,2.5,.12);if(i%8===0)ch[(i/8)%3|0].forEach(f=>tone(f,t,6,.06,'triangle'));i++};
+  step();timer=setInterval(step,900)}
+function setVol(){const v=muted?0:vol;if(master)master.gain.value=v*.5;if(el)el.volume=v;store.set('dwj_mute',muted);store.set('dwj_vol',vol);$('#mute').textContent=muted?'🔇':'🔊'}
+function sfx(){try{if(!AC||muted)return;const t=AC.currentTime,o=AC.createOscillator(),e=AC.createGain();o.frequency.value=1318;e.gain.setValueAtTime(.15,t);e.gain.exponentialRampToValueAtTime(.0001,t+1.2);o.connect(e);e.connect(AC.destination);o.start(t);o.stop(t+1.2)}catch{}}
+$('#sqlBtn').onclick=()=>{const t=$('#sqlSetup').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('SQL copied — paste in Supabase SQL Editor')).catch(()=>{const w=open('');if(w){w.document.write('<pre>'+t.replace(/</g,'&lt;')+'</pre>')}})};
+$('#mute').onclick=()=>{muted=!muted;setVol()};$('#vol').value=vol;$('#vol').oninput=e=>{vol=+e.target.value;muted=false;setVol()};setVol();
+
+$('#start').onclick=()=>{startMusic();$('#intro').style.display='none';$('#tree').style.display='flex';buildTree()};
+</script></body></html>
